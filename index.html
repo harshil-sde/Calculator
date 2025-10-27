@@ -6,7 +6,7 @@
   <title>Calculator — Simple & Fully Functional</title>
   <style>
     :root{
-      --bg:#0f1724; /* dark navy */
+      --bg:#0f1724;
       --card:#0b1220;
       --accent:#7c3aed;
       --muted:#94a3b8;
@@ -21,6 +21,7 @@
       background:linear-gradient(180deg,#071023 0%, #081426 60%);
       color:var(--text);
       display:flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
       padding:24px;
@@ -96,11 +97,6 @@
       font-weight:600;
     }
     .span-2{grid-column: span 2}
-    .wide{
-      grid-column: span 2;
-      display:flex;
-      gap:10px;
-    }
 
     .small-meta{
       display:flex;
@@ -133,7 +129,15 @@
       font-weight:600;
     }
 
-    /* responsive */
+    footer{
+      margin-top:20px;
+      color:var(--muted);
+      font-size:14px;
+      text-align:center;
+      letter-spacing:0.3px;
+    }
+    footer span.heart{color:var(--accent)}
+
     @media (max-width:420px){
       .calculator{padding:14px}
       .result{font-size:24px}
@@ -154,185 +158,55 @@
     </div>
 
     <div class="buttons" role="group" aria-label="Calculator buttons">
-      <!-- Row 1 -->
       <button class="key fn" data-action="clear" aria-label="Clear (Esc)">AC</button>
       <button class="key fn" data-action="back" aria-label="Backspace">⌫</button>
       <button class="key fn" data-action="paren" aria-label="Parentheses">( )</button>
       <button class="key op" data-value="/" aria-label="Divide">÷</button>
 
-      <!-- Row 2 -->
       <button class="key" data-value="7">7</button>
       <button class="key" data-value="8">8</button>
       <button class="key" data-value="9">9</button>
       <button class="key op" data-value="*" aria-label="Multiply">×</button>
 
-      <!-- Row 3 -->
       <button class="key" data-value="4">4</button>
       <button class="key" data-value="5">5</button>
       <button class="key" data-value="6">6</button>
       <button class="key op" data-value="-" aria-label="Subtract">−</button>
 
-      <!-- Row 4 -->
       <button class="key" data-value="1">1</button>
       <button class="key" data-value="2">2</button>
       <button class="key" data-value="3">3</button>
       <button class="key op" data-value="+" aria-label="Add">+</button>
 
-      <!-- Row 5 -->
       <button class="key span-2" data-value="0" aria-label="Zero">0</button>
       <button class="key" data-value=".">.</button>
       <button class="key op" data-action="equals" aria-label="Equals">=</button>
     </div>
   </main>
 
+  <footer>
+    Made with <span class="heart">❤</span> by Harshil
+  </footer>
+
   <script>
-    // Calculator logic
     (function(){
       const expressionEl = document.getElementById('expression');
       const resultEl = document.getElementById('result');
       const keys = document.querySelectorAll('button.key');
-
       let expr = '';
       let lastEvaluated = false;
-
-      function render(){
-        expressionEl.textContent = expr || '';
-        if(expr === '') resultEl.textContent = '0';
-      }
-
-      function safeEval(raw){
-        // Allow only digits, operators, parentheses, decimals and spaces
-        // This simple check prevents letters and other risky characters.
-        if(!/^[0-9+\-*/().\s]+$/.test(raw)){
-          throw new Error('Invalid characters in expression');
-        }
-        // Disallow consecutive operators like ++ or ** (except unary -)
-        if(/[+*\/]{2,}|--{2,}/.test(raw)){
-          // let JS handle some cases but proactively reject obvious invalid repeats
-          // we'll still allow cases like 2*-3 because *- is valid for multiplication by negative
-        }
-        // Use Function constructor to evaluate (slightly safer than eval here) after checks
-        // Replace division/multiplication unicode if present (we store / and * already)
-        const fn = new Function('return (' + raw + ')');
-        return fn();
-      }
-
-      function setError(message){
-        resultEl.textContent = message;
-        resultEl.classList.add('error');
-      }
-      function clearError(){
-        resultEl.classList.remove('error');
-      }
-
-      function insert(char){
-        // If last action was equals and user types a number or dot, start new expression
-        if(lastEvaluated && /[0-9.]/.test(char)){
-          expr = '';
-          lastEvaluated = false;
-        }
-        expr += char;
-        clearError();
-        render();
-        // live-evaluate in a try block for instant feedback
-        try{
-          const val = safeEval(expr);
-          if(Number.isFinite(val)){
-            resultEl.textContent = String(val);
-          } else {
-            resultEl.textContent = 'Error';
-          }
-        } catch(e){
-          // Ignore evaluation errors for partial expressions, but show when it's clearly wrong
-          // We'll only set an error if it's definitely invalid (contains invalid chars)
-          if(/Invalid characters/.test(e.message)){
-            setError('Invalid input');
-          } else {
-            // partial expression — show nothing special, keep previous result or 0
-            // do not overwrite with 'Error' while typing
-          }
-        }
-      }
-
-      function backspace(){
-        if(expr.length > 0){
-          expr = expr.slice(0, -1);
-          lastEvaluated = false;
-          clearError();
-          render();
-        }
-      }
-
-      function clearAll(){
-        expr = '';
-        lastEvaluated = false;
-        clearError();
-        render();
-        resultEl.textContent = '0';
-      }
-
-      function toggleParens(){
-        // Simple heuristic: if there are more open parens than close, insert close, else insert open
-        const open = (expr.match(/\(/g) || []).length;
-        const close = (expr.match(/\)/g) || []).length;
-        if(open > close) insert(')'); else insert('(');
-      }
-
-      function evaluate(){
-        try{
-          const value = safeEval(expr || '0');
-          if(typeof value === 'number' && !Number.isNaN(value) && Number.isFinite(value)){
-            resultEl.textContent = String(value);
-            expr = String(value);
-            lastEvaluated = true;
-            clearError();
-          } else {
-            setError('Math error');
-          }
-        } catch(e){
-          setError('Invalid expression');
-        }
-      }
-
-      // click handling
-      keys.forEach(k => k.addEventListener('click', (ev) => {
-        const el = ev.currentTarget;
-        const v = el.getAttribute('data-value');
-        const action = el.getAttribute('data-action');
-        if(action === 'clear') return clearAll();
-        if(action === 'back') return backspace();
-        if(action === 'paren') return toggleParens();
-        if(action === 'equals') return evaluate();
-        if(v) return insert(v);
-      }));
-
-      // keyboard support
-      window.addEventListener('keydown', (ev) => {
-        const k = ev.key;
-        if(k === 'Escape') return clearAll();
-        if(k === 'Backspace'){
-          ev.preventDefault();
-          return backspace();
-        }
-        if(k === 'Enter' || k === '='){
-          ev.preventDefault();
-          return evaluate();
-        }
-        // allow numbers, operators, parentheses and dot
-        if(/^[0-9+\-*/().]$/.test(k)){
-          ev.preventDefault();
-          return insert(k);
-        }
-      });
-
-      // initial render
+      function render(){expressionEl.textContent = expr || '';if(expr==='')resultEl.textContent='0';}
+      function safeEval(raw){if(!/^[0-9+\-*/().\s]+$/.test(raw)){throw new Error('Invalid characters in expression');}const fn = new Function('return ('+raw+')');return fn();}
+      function setError(m){resultEl.textContent=m;resultEl.classList.add('error');}
+      function clearError(){resultEl.classList.remove('error');}
+      function insert(c){if(lastEvaluated&&/[0-9.]/.test(c)){expr='';lastEvaluated=false;}expr+=c;clearError();render();try{const v=safeEval(expr);if(Number.isFinite(v)){resultEl.textContent=String(v);}else{resultEl.textContent='Error';}}catch(e){if(/Invalid characters/.test(e.message)){setError('Invalid input');}}}
+      function backspace(){if(expr.length>0){expr=expr.slice(0,-1);lastEvaluated=false;clearError();render();}}
+      function clearAll(){expr='';lastEvaluated=false;clearError();render();resultEl.textContent='0';}
+      function toggleParens(){const o=(expr.match(/\(/g)||[]).length;const c=(expr.match(/\)/g)||[]).length;if(o>c)insert(')');else insert('(');}
+      function evaluate(){try{const v=safeEval(expr||'0');if(typeof v==='number'&&!Number.isNaN(v)&&Number.isFinite(v)){resultEl.textContent=String(v);expr=String(v);lastEvaluated=true;clearError();}else{setError('Math error');}}catch(e){setError('Invalid expression');}}
+      keys.forEach(k=>k.addEventListener('click',ev=>{const el=ev.currentTarget;const v=el.getAttribute('data-value');const a=el.getAttribute('data-action');if(a==='clear')return clearAll();if(a==='back')return backspace();if(a==='paren')return toggleParens();if(a==='equals')return evaluate();if(v)return insert(v);}));
+      window.addEventListener('keydown',ev=>{const k=ev.key;if(k==='Escape')return clearAll();if(k==='Backspace'){ev.preventDefault();return backspace();}if(k==='Enter'||k==='='){ev.preventDefault();return evaluate();}if(/^[0-9+\-*/().]$/.test(k)){ev.preventDefault();return insert(k);}});
       render();
-
-      // expose for debugging (optional)
-      window._calc = {
-        get expr(){return expr},
-        set expr(v){expr = String(v); render();}
-      };
     })();
   </script>
 </body>
